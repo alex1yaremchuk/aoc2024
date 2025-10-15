@@ -131,3 +131,38 @@ pub fn readNumbersLineSlices(
         return error.Internal;
     return .{ .all = all, .rows = rows };
 }
+
+pub fn readCharsLineSlices(
+    allocator: std.mem.Allocator,
+    path: []const u8,
+) !struct { all: []u8, rows: [][]const u8 } {
+    var data = try std.fs.cwd().readFileAlloc(path, allocator, .unlimited);
+    errdefer allocator.free(data);
+
+    var w: usize = 0;
+    for (data) |b| {
+        if (b != '\r') {
+            data[w] = b;
+            w += 1;
+        }
+    }
+    data = data[0..w];
+
+    var line_count: usize = 0;
+    var it1 = std.mem.splitScalar(u8, data, '\n');
+    while (it1.next()) |line_raw| {
+        if (line_raw.len != 0) line_count += 1;
+    }
+
+    var rows = try allocator.alloc([]const u8, line_count);
+    errdefer allocator.free(rows);
+
+    var i: usize = 0;
+    var it2 = std.mem.splitScalar(u8, data, '\n');
+    while (it2.next()) |line_raw| {
+        if (line_raw.len == 0) continue;
+        rows[i] = line_raw;
+        i += 1;
+    }
+    return .{ .all = data, .rows = rows };
+}
