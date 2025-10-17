@@ -166,3 +166,18 @@ pub fn readCharsLineSlices(
     }
     return .{ .all = data, .rows = rows };
 }
+
+fn stripCR(data: []u8) []u8 {
+    var w: usize = 0;
+    for (data) |c| {
+        if (c != '\r') {
+            data[w] = c;
+            w += 1;
+        }
+    }
+    return data[0..w];
+}
+
+fn parseU16(s: []const u8) !u16 {
+    return std.fmt.parseUnsigned(u16, s, 10);
+}
