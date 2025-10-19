@@ -167,7 +167,7 @@ pub fn readCharsLineSlices(
     return .{ .all = data, .rows = rows };
 }
 
-fn stripCR(data: []u8) []u8 {
+pub fn stripCR(data: []u8) []u8 {
     var w: usize = 0;
     for (data) |c| {
         if (c != '\r') {
@@ -178,6 +178,27 @@ fn stripCR(data: []u8) []u8 {
     return data[0..w];
 }
 
-fn parseU16(s: []const u8) !u16 {
-    return std.fmt.parseUnsigned(u16, s, 10);
+pub fn parseInt(s: []const u8, T: type) !T {
+    return std.fmt.parseUnsigned(T, s, 10);
+}
+
+pub fn readCharLines(
+    allocator: std.mem.Allocator,
+    path: []const u8,
+) ![][]const u8 {
+    const data = try std.fs.cwd().readFileAlloc(path, allocator, .unlimited);
+    errdefer allocator.free(data);
+
+    data = stripCR(data);
+
+    var lines = std.ArrayListUnmanaged([]const u8){};
+    errdefer lines.deinit(allocator);
+
+    var it = std.mem.splitScalar(u8, data, '\n');
+
+    while (it.next()) |line| {
+        if (line.len == 0) continue;
+        try lines.append(allocator, line);
+    }
+    return lines.toOwnedSlice(allocator);
 }
