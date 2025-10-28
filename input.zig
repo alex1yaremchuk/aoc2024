@@ -1,4 +1,23 @@
 const std = @import("std");
+const print = std.debug.print;
+
+pub const Point = struct {
+    row: isize,
+    col: isize,
+
+    pub fn add(self: *Point, p: *const Point) *Point {
+        self.row += p.row;
+        self.col += p.col;
+        return self;
+    }
+};
+
+pub const Dirs = [4]Point{
+    Point{ .row = -1, .col = 0 },
+    Point{ .row = 1, .col = 0 },
+    Point{ .row = 0, .col = 1 },
+    Point{ .row = 0, .col = -1 },
+};
 
 pub fn readChars(
     allocator: std.mem.Allocator,
@@ -178,6 +197,17 @@ pub fn stripCR(data: []u8) []u8 {
     return data[0..w];
 }
 
+pub fn strip(data: []u8, skip: u8) []u8 {
+    var w: usize = 0;
+    for (data) |c| {
+        if (c != skip) {
+            data[w] = c;
+            w += 1;
+        }
+    }
+    return data[0..w];
+}
+
 pub fn parseInt(s: []const u8, T: type) !T {
     return std.fmt.parseUnsigned(T, s, 10);
 }
@@ -202,3 +232,107 @@ pub fn readCharLines(
     }
     return lines.toOwnedSlice(allocator);
 }
+
+// ============== 2D digits ========================
+
+const NeighborIter = struct {
+    g: *const Grid,
+    row: usize,
+    col: usize,
+    i: u3 = 0, // 0..3
+
+    const dirs = [_][2]i32{ .{ 1, 0 }, .{ -1, 0 }, .{ 0, 1 }, .{ 0, -1 } };
+
+    pub inline fn init(g: *const Grid, r: usize, c: usize) NeighborIter {
+        return .{ .g = g, .row = r, .col = c };
+    }
+
+    pub inline fn next(self: *NeighborIter) ?usize {
+        while (self.i < 4) {
+            // std.debug.print("self.i = {}", .{self.i});
+            const d = dirs[self.i];
+            const nr = @as(i32, @intCast(self.row)) + d[0];
+            const nc = @as(i32, @intCast(self.col)) + d[1];
+            self.i += 1;
+            if (nc >= 0 and nr >= 0 and nc < self.g.cols and nr < self.g.rows) {
+                return self.g.idx(@intCast(nr), @intCast(nc));
+            }
+        }
+        return null;
+    }
+};
+
+pub const Grid = struct {
+    cols: usize,
+    rows: usize,
+    nums: []u8,
+
+    pub inline fn coords(self: *const Grid, ind: usize) ![2]usize {
+        if (ind >= self.cols * self.rows) return error.OutOfBounds;
+        const row = ind / self.cols;
+        const col = ind % self.cols;
+
+        // print("ind {} rows {} cols {} row {} col {} \n", .{ ind, self.rows, self.cols, row, col });
+
+        return [2]usize{ row, col };
+    }
+
+    pub inline fn idx(self: *const Grid, row: usize, col: usize) usize {
+        return row * self.cols + col;
+    }
+
+    pub inline fn get(self: *const Grid, row: usize, col: usize) u8 {
+        return self.nums[self.idx(row, col)];
+    }
+
+    pub inline fn neighbors(self: *const Grid, row: usize, col: usize) NeighborIter {
+        return NeighborIter.init(self, row, col);
+    }
+};
+
+pub fn readDigits2D(
+    allocator: std.mem.Allocator,
+    path: []const u8,
+) !Grid {
+    const raw = try std.fs.cwd().readFileAlloc(path, allocator, .unlimited);
+    errdefer allocator.free(raw);
+
+    var data = stripCR(raw);
+
+    const D = try findDimensions(data);
+
+    data = strip(data, '\n');
+
+    const expected = D.cols * D.rows;
+    if (data.len != expected) return error.ShapeMismatched;
+
+    var nums = try allocator.alloc(u8, data.len);
+
+    for (data, 0..) |ch, i| {
+        // std.debug.print("[ {} {} ] ", .{ ch, '0' });
+        nums[i] = ch - '0';
+    }
+
+    return Grid{ .rows = D.rows, .cols = D.cols, .nums = nums };
+}
+
+const Dimensions = struct {
+    rows: usize,
+    cols: usize,
+};
+
+fn findDimensions(data: []u8) !Dimensions {
+    var rows: usize = 0;
+    var cols: usize = 0;
+
+    var it = std.mem.splitScalar(u8, data, '\n');
+    while (it.next()) |line| {
+        if (line.len == 0) continue;
+        if (cols == 0) cols = line.len;
+        if (cols != 0 and cols != line.len) return error.NotRectangular;
+        rows += 1;
+    }
+
+    return Dimensions{ .rows = rows, .cols = cols };
+}
+// ============== 2D digits ========================
