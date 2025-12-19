@@ -249,11 +249,12 @@ const NeighborIter = struct {
 
     pub inline fn next(self: *NeighborIter) ?usize {
         while (self.i < 4) {
-            // std.debug.print("self.i = {}", .{self.i});
+            // std.debug.print("self.i = {}\n", .{self.i});
             const d = dirs[self.i];
             const nr = @as(i32, @intCast(self.row)) + d[0];
             const nc = @as(i32, @intCast(self.col)) + d[1];
             self.i += 1;
+            // std.debug.print("self.i after = {}\n", .{self.i});
             if (nc >= 0 and nr >= 0 and nc < self.g.cols and nr < self.g.rows) {
                 return self.g.idx(@intCast(nr), @intCast(nc));
             }
@@ -265,7 +266,7 @@ const NeighborIter = struct {
 pub const Grid = struct {
     cols: usize,
     rows: usize,
-    nums: []u8,
+    vals: []u8,
 
     pub inline fn coords(self: *const Grid, ind: usize) ![2]usize {
         if (ind >= self.cols * self.rows) return error.OutOfBounds;
@@ -282,17 +283,24 @@ pub const Grid = struct {
     }
 
     pub inline fn get(self: *const Grid, row: usize, col: usize) u8 {
-        return self.nums[self.idx(row, col)];
+        return self.vals[self.idx(row, col)];
     }
 
     pub inline fn neighbors(self: *const Grid, row: usize, col: usize) NeighborIter {
         return NeighborIter.init(self, row, col);
     }
+
+    pub inline fn neighbors_ind(self: *const Grid, ind: usize) NeighborIter {
+        const row = ind / self.cols;
+        const col = ind % self.cols;
+        return NeighborIter.init(self, row, col);
+    }
 };
 
-pub fn readDigits2D(
+pub fn read2D(
     allocator: std.mem.Allocator,
     path: []const u8,
+    parseNums: bool,
 ) !Grid {
     const raw = try std.fs.cwd().readFileAlloc(path, allocator, .unlimited);
     errdefer allocator.free(raw);
@@ -306,14 +314,18 @@ pub fn readDigits2D(
     const expected = D.cols * D.rows;
     if (data.len != expected) return error.ShapeMismatched;
 
-    var nums = try allocator.alloc(u8, data.len);
+    if (parseNums) {
+        var nums = try allocator.alloc(u8, data.len);
 
-    for (data, 0..) |ch, i| {
-        // std.debug.print("[ {} {} ] ", .{ ch, '0' });
-        nums[i] = ch - '0';
+        for (data, 0..) |ch, i| {
+            // std.debug.print("[ {} {} ] ", .{ ch, '0' });
+            nums[i] = ch - '0';
+        }
+
+        return Grid{ .rows = D.rows, .cols = D.cols, .vals = nums };
+    } else {
+        return Grid{ .rows = D.rows, .cols = D.cols, .vals = data };
     }
-
-    return Grid{ .rows = D.rows, .cols = D.cols, .nums = nums };
 }
 
 const Dimensions = struct {
@@ -336,3 +348,24 @@ fn findDimensions(data: []u8) !Dimensions {
     return Dimensions{ .rows = rows, .cols = cols };
 }
 // ============== 2D digits ========================
+
+pub fn readNumbers(
+    allocator: std.mem.Allocator,
+    path: []const u8,
+    comptime T: type,
+) ![]T {
+    const raw = try std.fs.cwd().readFileAlloc(path, allocator, .unlimited);
+    errdefer allocator.free(raw);
+    var data = stripCR(raw);
+    data = strip(data, '\n');
+
+    var nums = std.ArrayListUnmanaged(T){};
+
+    var it = std.mem.splitAny(u8, data, " \t");
+
+    while (it.next()) |next| {
+        const num = try std.fmt.parseInt(T, next, 10);
+        try nums.append(allocator, num);
+    }
+    return nums.toOwnedSlice(allocator);
+}
