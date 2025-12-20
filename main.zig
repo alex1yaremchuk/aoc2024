@@ -1,5 +1,5 @@
 const std = @import("std");
-const day = @import("14.zig");
+const day = @import("15.zig");
 const print = std.debug.print;
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -7,7 +7,4 @@ pub fn main() !void {
     const allocator = gpa.allocator();
 
     try day.solvepart2(allocator);
-
-    print("usize bits: {d}\n", .{@bitSizeOf(usize)});
-    print("usize max:  {}\n", .{std.math.maxInt(usize)});
 }
