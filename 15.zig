@@ -1,7 +1,7 @@
 const std = @import("std");
 const timed = @import("timed.zig");
 const print = std.debug.print;
-const inp = @import("input2.zig");
+const inp = @import("input/index.zig");
 const Dir = inp.Dir;
 
 fn part1(_: std.mem.Allocator) !void {
