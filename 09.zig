@@ -1,6 +1,7 @@
 const std = @import("std");
 const timed = @import("timed.zig");
 const input = @import("input.zig");
+const app_io = @import("app_io.zig");
 
 fn part1(alloc: std.mem.Allocator) !void {
     var arena_state = std.heap.ArenaAllocator.init(alloc);
@@ -144,7 +145,7 @@ pub fn readDigits(
     allocator: std.mem.Allocator,
     path: []const u8,
 ) ![]u8 {
-    const data = try std.fs.cwd().readFileAlloc(path, allocator, .unlimited);
+    const data = try std.Io.Dir.cwd().readFileAlloc(app_io.io, path, allocator, .unlimited);
     errdefer allocator.free(data);
 
     const nums: []u8 = try allocator.alloc(u8, data.len);

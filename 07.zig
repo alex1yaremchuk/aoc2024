@@ -1,6 +1,7 @@
 const std = @import("std");
 const input = @import("input.zig");
 const timed = @import("timed.zig");
+const app_io = @import("app_io.zig");
 
 fn part1(alloc: std.mem.Allocator) !void {
     var arena_state = std.heap.ArenaAllocator.init(alloc);
@@ -114,7 +115,7 @@ pub fn solvepart2(allocator: std.mem.Allocator) !void {
 }
 
 fn readInts(path: []const u8, allocator: std.mem.Allocator) ![][]u128 {
-    var data = try std.fs.cwd().readFileAlloc(path, allocator, .unlimited);
+    var data = try std.Io.Dir.cwd().readFileAlloc(app_io.io, path, allocator, .unlimited);
 
     data = input.stripCR(data);
 

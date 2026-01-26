@@ -1,5 +1,6 @@
 const std = @import("std");
 const print = std.debug.print;
+const app_io = @import("app_io.zig");
 
 pub const Point = struct {
     row: isize,
@@ -23,7 +24,7 @@ pub fn readChars(
     allocator: std.mem.Allocator,
     path: []const u8,
 ) ![]u8 {
-    const data = try std.fs.cwd().readFileAlloc(path, allocator, .unlimited);
+    const data = try std.Io.Dir.cwd().readFileAlloc(app_io.io, path, allocator, .unlimited);
     errdefer allocator.free(data);
 
     return data;
@@ -36,7 +37,7 @@ pub fn readLinesUnmanaged(
     lines: std.ArrayListUnmanaged([]const u8),
     buffer: []u8,
 } {
-    const data = try std.fs.cwd().readFileAlloc(path, allocator, .unlimited);
+    const data = try std.Io.Dir.cwd().readFileAlloc(app_io.io, path, allocator, .unlimited);
     errdefer allocator.free(data);
 
     var lines = std.ArrayListUnmanaged([]const u8){};
@@ -56,7 +57,7 @@ pub fn readTwoColumnsAlloc(
     path: []const u8,
     comptime T: type,
 ) !struct { left: []T, right: []T } {
-    const data = try std.fs.cwd().readFileAlloc(path, allocator, .unlimited);
+    const data = try std.Io.Dir.cwd().readFileAlloc(app_io.io, path, allocator, .unlimited);
     defer allocator.free(data);
 
     var n: usize = 0;
@@ -98,7 +99,7 @@ pub fn readNumbersLineSlices(
     path: []const u8,
     comptime T: type,
 ) !struct { all: []T, rows: [][]T } {
-    const data = try std.fs.cwd().readFileAlloc(path, allocator, .unlimited);
+    const data = try std.Io.Dir.cwd().readFileAlloc(app_io.io, path, allocator, .unlimited);
     defer allocator.free(data);
 
     var total_values: usize = 0;
@@ -155,7 +156,7 @@ pub fn readCharsLineSlices(
     allocator: std.mem.Allocator,
     path: []const u8,
 ) !struct { all: []u8, rows: [][]const u8 } {
-    var data = try std.fs.cwd().readFileAlloc(path, allocator, .unlimited);
+    var data = try std.Io.Dir.cwd().readFileAlloc(app_io.io, path, allocator, .unlimited);
     errdefer allocator.free(data);
 
     var w: usize = 0;
@@ -216,7 +217,7 @@ pub fn readCharLines(
     allocator: std.mem.Allocator,
     path: []const u8,
 ) ![][]const u8 {
-    const data = try std.fs.cwd().readFileAlloc(path, allocator, .unlimited);
+    const data = try std.Io.Dir.cwd().readFileAlloc(app_io.io, path, allocator, .unlimited);
     errdefer allocator.free(data);
 
     data = stripCR(data);
@@ -302,7 +303,7 @@ pub fn read2D(
     path: []const u8,
     parseNums: bool,
 ) !Grid {
-    const raw = try std.fs.cwd().readFileAlloc(path, allocator, .unlimited);
+    const raw = try std.Io.Dir.cwd().readFileAlloc(app_io.io, path, allocator, .unlimited);
     errdefer allocator.free(raw);
 
     var data = stripCR(raw);
@@ -354,7 +355,7 @@ pub fn readNumbers(
     path: []const u8,
     comptime T: type,
 ) ![]T {
-    const raw = try std.fs.cwd().readFileAlloc(path, allocator, .unlimited);
+    const raw = try std.Io.Dir.cwd().readFileAlloc(app_io.io, path, allocator, .unlimited);
     errdefer allocator.free(raw);
     var data = stripCR(raw);
     data = strip(data, '\n');

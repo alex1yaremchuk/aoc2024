@@ -5,10 +5,10 @@ pub fn timed(
     func: fn (std.mem.Allocator) anyerror!void,
     allocator: std.mem.Allocator,
 ) !void {
-    const start = std.time.nanoTimestamp();
+    const start = try std.time.Instant.now();
     defer {
-        const dt = std.time.nanoTimestamp() - start;
-        std.debug.print("[{s}] {d} ms\n", .{ label, @divTrunc(dt, 1_000_000) });
+        const dt = (std.time.Instant.now() catch unreachable).since(start);
+        std.debug.print("[{s}] {d} ms\n", .{ label, dt / std.time.ns_per_ms });
     }
     try func(allocator);
 }

@@ -2,6 +2,7 @@ const std = @import("std");
 const iter = @import("iter.zig");
 const grid = @import("grid.zig");
 const util = @import("util.zig");
+const app_io = @import("../app_io.zig");
 
 pub const Input = struct {
     buf: []u8,
@@ -121,7 +122,7 @@ pub const Input = struct {
 pub fn readFile(arena: *std.heap.ArenaAllocator, path: []const u8) !Input {
     const alloc = arena.allocator();
 
-    var data = try std.fs.cwd().readFileAlloc(alloc, path, std.math.maxInt(usize));
+    var data = try std.Io.Dir.cwd().readFileAlloc(app_io.io, path, alloc, .unlimited);
 
     var w: usize = 0;
     for (data) |c| {

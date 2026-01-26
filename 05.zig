@@ -1,6 +1,7 @@
 const std = @import("std");
 const input = @import("input.zig");
 const timed = @import("timed.zig");
+const app_io = @import("app_io.zig");
 
 const Rule = struct { a: u16, b: u16 };
 
@@ -127,7 +128,7 @@ pub fn solvepart2(allocator: std.mem.Allocator) !void {
 }
 
 fn parseRulesAndSeqs(arena: std.mem.Allocator, path: []const u8) !Parsed {
-    const raw = try std.fs.cwd().readFileAlloc(path, arena, .unlimited);
+    const raw = try std.Io.Dir.cwd().readFileAlloc(app_io.io, path, arena, .unlimited);
 
     const data = stripCR(raw);
 
@@ -181,7 +182,7 @@ fn parseRulesAndSeqs(arena: std.mem.Allocator, path: []const u8) !Parsed {
 }
 
 fn parseRulesAndSeqsIndexed(arena: std.mem.Allocator, path: []const u8) !ParsedIndexed {
-    const raw = try std.fs.cwd().readFileAlloc(path, arena, .unlimited);
+    const raw = try std.Io.Dir.cwd().readFileAlloc(app_io.io, path, arena, .unlimited);
 
     const data = stripCR(raw);
 
