@@ -1,5 +1,5 @@
 const std = @import("std");
-const day = @import("17.zig");
+const day = @import("18.zig");
 const print = std.debug.print;
 const app_io = @import("app_io.zig");
 
