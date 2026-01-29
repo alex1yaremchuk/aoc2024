@@ -40,6 +40,31 @@ pub const Input = struct {
         return out;
     }
 
+    pub fn stringsAny(
+        self: Input,
+        arena: *std.heap.ArenaAllocator,
+        delims: []const u8,
+    ) ![][]const u8 {
+        return util.stringsAny(arena, self.buf, delims);
+    }
+
+    pub fn stringsAnyTrim(
+        self: Input,
+        arena: *std.heap.ArenaAllocator,
+        delims: []const u8,
+        trim_set: []const u8,
+    ) ![][]const u8 {
+        return util.stringsAnyTrim(arena, self.buf, delims, trim_set);
+    }
+
+    pub fn stringsScalarKeepEmpty(
+        self: Input,
+        arena: *std.heap.ArenaAllocator,
+        delim: u8,
+    ) ![][]const u8 {
+        return util.stringsScalarKeepEmpty(arena, self.buf, delim);
+    }
+
     pub fn intRowsAny(
         self: Input,
         arena: *std.heap.ArenaAllocator,

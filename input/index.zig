@@ -20,5 +20,8 @@ pub const readFile = input.readFile;
 
 pub const tokensAny = util.tokensAny;
 pub const groupLines = util.groupLines;
+pub const stringsAny = util.stringsAny;
+pub const stringsAnyTrim = util.stringsAnyTrim;
+pub const stringsScalarKeepEmpty = util.stringsScalarKeepEmpty;
 pub const stripByteInPlace = util.stripByteInPlace;
 pub const Dir = util.Dir;
