@@ -14,6 +14,7 @@ pub const gridDigits = grid.gridDigits;
 pub const Grid = grid.Grid;
 pub const Neigh4Iter = grid.Neigh4Iter;
 pub const gridLinesFromSlice = grid.gridLinesFromSlice;
+pub const bfs4U8 = grid.bfs4U8;
 
 pub const Input = input.Input;
 pub const readFile = input.readFile;
