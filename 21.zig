@@ -3,17 +3,12 @@ const timed = @import("timed.zig");
 const print = std.debug.print;
 const inp = @import("input/index.zig");
 
-const depth_level = 3;
-const UNK: u32 = std.math.maxInt(u32);
-
-const KeypadType = enum {
-    Numeric,
-    Arrows,
-};
+const depth_level = 26;
+const UNK: usize = std.math.maxInt(usize);
 
 const Solver = struct {
-    memo_num: [depth_level + 1][11][11]u32,
-    memo_dir: [depth_level + 1][5][5]u32,
+    memo_num: [depth_level + 1][11][11]usize,
+    memo_dir: [depth_level + 1][5][5]usize,
 
     fn init() Solver {
         var s: Solver = undefined;
@@ -24,17 +19,17 @@ const Solver = struct {
         return s;
     }
 
-    fn costNum(self: *Solver, depth: usize, from_id: u8, to_id: u8) !u32 {
+    fn costNum(self: *Solver, depth: usize, from_id: u8, to_id: u8) !usize {
         if (self.memo_num[depth][from_id][to_id] != UNK) return self.memo_num[depth][from_id][to_id];
         if (depth == 0) return error.CannotTypeDirectlyOnNumeric;
 
-        var min_cost: u32 = std.math.maxInt(u32);
+        var min_cost: usize = std.math.maxInt(usize);
 
         const from_key = numeric_kp.keyFromId(from_id);
         const to_key = numeric_kp.keyFromId(to_id);
         var it = try ShortestPathsIter.init(numeric_kp, from_key, to_key);
         var prev_id: u8 = dir_kp.id('A') orelse return error.BadKey;
-        var path_sum: u32 = 0;
+        var path_sum: usize = 0;
         var buf: [10_000]u8 = undefined;
         while (it.next(&buf)) |path| {
             path_sum = 0;
@@ -44,23 +39,24 @@ const Solver = struct {
                 path_sum += try self.costDir(depth - 1, prev_id, next_id);
                 prev_id = next_id;
             }
+            path_sum += try self.costDir(depth - 1, prev_id, dir_kp.id('A') orelse return error.BadKey);
             if (path_sum < min_cost) min_cost = path_sum;
         }
         self.memo_num[depth][from_id][to_id] = min_cost;
         return min_cost;
     }
 
-    fn costDir(self: *Solver, depth: usize, from_id: u8, to_id: u8) !u32 {
+    fn costDir(self: *Solver, depth: usize, from_id: u8, to_id: u8) !usize {
         if (self.memo_dir[depth][from_id][to_id] != UNK) return self.memo_dir[depth][from_id][to_id];
         if (depth == 0) return 1;
 
-        var min_cost: u32 = std.math.maxInt(u32);
+        var min_cost: usize = std.math.maxInt(usize);
 
         const from_key = dir_kp.keyFromId(from_id);
         const to_key = dir_kp.keyFromId(to_id);
         var it = try ShortestPathsIter.init(dir_kp, from_key, to_key);
         var prev_id: u8 = dir_kp.id('A') orelse return error.BadKey;
-        var path_sum: u32 = 0;
+        var path_sum: usize = 0;
         var buf: [10_000]u8 = undefined;
         while (it.next(&buf)) |path| {
             path_sum = 0;
@@ -70,6 +66,7 @@ const Solver = struct {
                 path_sum += try self.costDir(depth - 1, prev_id, next_id);
                 prev_id = next_id;
             }
+            path_sum += try self.costDir(depth - 1, prev_id, dir_kp.id('A') orelse return error.BadKey);
             if (path_sum < min_cost) min_cost = path_sum;
         }
         self.memo_dir[depth][from_id][to_id] = min_cost;
@@ -81,7 +78,7 @@ fn part1(_: std.mem.Allocator) !void {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena.deinit();
 
-    const input = try inp.readFile(&arena, "21_.txt");
+    const input = try inp.readFile(&arena, "21.txt");
 
     var lines_it = input.lines();
 
@@ -147,8 +144,6 @@ const MOVES = [_]Move{
 
 const UNREACH: u8 = 0xFF;
 
-/// Маленькая решётка: numeric 3x4, dir 3x2.
-/// Храним как grid[y][x] = символ кнопки или 0 для "дыры".
 pub const Keypad = struct {
     w: i8,
     h: i8,
@@ -217,15 +212,6 @@ pub const Keypad = struct {
     }
 };
 
-fn bfsDist(kp: Keypad, start: Coord, dist: [][][]u8) void {
-    // dist is dist[H][W][1] ??? нет. Мы сделаем по-другому ниже.
-    _ = kp;
-    _ = start;
-    _ = dist;
-}
-
-/// Итератор всех кратчайших путей from_key -> to_key.
-/// next(buf) -> ?[]const u8  (пишет в buf и возвращает buf[0..len])
 pub const ShortestPathsIter = struct {
     kp: Keypad,
     start: Coord,
