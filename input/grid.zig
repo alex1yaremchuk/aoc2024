@@ -109,6 +109,26 @@ pub fn Grid(comptime T: type) type {
             return Neigh2Steps(Self).init(self, rc[0], rc[1]);
         }
 
+        pub inline fn manhattan(
+            self: *const Self,
+            r: usize,
+            c: usize,
+            dist: usize,
+            mode: ManhMode,
+        ) ManhIter(Self) {
+            return ManhIter(Self).init(self, r, c, dist, mode);
+        }
+
+        pub inline fn manhattanIndex(
+            self: *const Self,
+            ind: usize,
+            dist: usize,
+            mode: ManhMode,
+        ) ManhIter(Self) {
+            const rc = self.coords(ind);
+            return ManhIter(Self).init(self, rc[0], rc[1], dist, mode);
+        }
+
         pub fn print(self: Self) void {
             comptime if (T != u8) @compileError("print is for u8 only");
 
@@ -215,6 +235,117 @@ pub fn Neigh2Steps(comptime G: type) type {
     };
 }
 
+pub const ManhMode = enum {
+    le, // <= dist
+    eq, // == dist
+};
+
+pub fn ManhIter(comptime G: type) type {
+    return struct {
+        g: *const G,
+        r0: isize,
+        c0: isize,
+        manh_dist: isize,
+        mode: ManhMode,
+
+        dr: isize = 0,
+        dc: isize = 0,
+        eq_second: bool = false,
+        started: bool = false,
+
+        const Self = @This();
+
+        pub inline fn init(g: *const G, r: usize, c: usize, manh_dist: usize, mode: ManhMode) Self {
+            return .{
+                .g = g,
+                .r0 = @intCast(r),
+                .c0 = @intCast(c),
+                .manh_dist = @intCast(manh_dist),
+                .mode = mode,
+                .dr = -@as(isize, @intCast(manh_dist)),
+                .dc = 0,
+                .eq_second = false,
+                .started = false,
+            };
+        }
+
+        inline fn abs(v: isize) isize {
+            return if (v < 0) -v else v;
+        }
+
+        fn setRow(self: *Self) void {
+            const rem = self.manh_dist - abs(self.dr);
+            if (self.mode == .le) {
+                self.dc = -rem;
+            } else {
+                if (rem == 0) {
+                    self.dc = 0;
+                    self.eq_second = false;
+                } else {
+                    self.dc = -rem;
+                    self.eq_second = true;
+                }
+            }
+        }
+
+        fn advance(self: *Self) bool {
+            if (!self.started) {
+                self.started = true;
+                self.setRow();
+                return true;
+            }
+
+            if (self.mode == .le) {
+                const rem = self.manh_dist - abs(self.dr);
+                if (self.dc < rem) {
+                    self.dc += 1;
+                    return true;
+                }
+                self.dr += 1;
+                if (self.dr > self.manh_dist) return false;
+                self.setRow();
+                return true;
+            } else {
+                const rem = self.manh_dist - abs(self.dr);
+                if (rem == 0) {
+                    self.dr += 1;
+                    if (self.dr > self.manh_dist) return false;
+                    self.setRow();
+                    return true;
+                }
+                if (self.eq_second) {
+                    self.dc = rem;
+                    self.eq_second = false;
+                    return true;
+                }
+                self.dr += 1;
+                if (self.dr > self.manh_dist) return false;
+                self.setRow();
+                return true;
+            }
+        }
+
+        pub inline fn dist(self: *const Self) usize {
+            return @intCast(abs(self.dr) + abs(self.dc));
+        }
+
+        pub fn next(self: *Self) ?usize {
+            while (true) {
+                if (!self.advance()) return null;
+
+                if (self.dr == 0 and self.dc == 0) continue; // center excluded
+
+                const r = self.r0 + self.dr;
+                const c = self.c0 + self.dc;
+
+                if (self.g.inBounds(r, c)) {
+                    return self.g.idx(@intCast(r), @intCast(c));
+                }
+            }
+        }
+    };
+}
+
 pub fn bfs4U8(
     allocator: std.mem.Allocator,
     g: *const Grid(u8),
@@ -225,7 +356,7 @@ pub fn bfs4U8(
     @memset(dist, std.math.maxInt(usize));
 
     var queue = try std.ArrayList(usize).initCapacity(allocator, g.vals.len);
-    defer queue.deinit();
+    defer queue.deinit(allocator);
 
     var head: usize = 0;
     queue.appendAssumeCapacity(start);

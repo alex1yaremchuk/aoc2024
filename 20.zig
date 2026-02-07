@@ -6,13 +6,14 @@ const maxInt = std.math.maxInt;
 
 const G = inp.Grid(u8);
 
-const cut_threshold = 40;
+const cut_maxlength = 20;
+const cut_threshold = 100;
 
 fn part1(_: std.mem.Allocator) !void {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena.deinit();
 
-    const input = try inp.readFile(&arena, "20_.txt");
+    const input = try inp.readFile(&arena, "20.txt");
 
     const gl = try input.gridLines(&arena);
     const vals = try inp.gridFlatten(&arena, gl);
@@ -54,7 +55,62 @@ fn part1(_: std.mem.Allocator) !void {
     print("total number of cheats of {d} and more is: {d}\n", .{ cut_threshold, counter });
 }
 
-fn part2(_: std.mem.Allocator) !void {}
+fn part2(_: std.mem.Allocator) !void {
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer arena.deinit();
+
+    const input = try inp.readFile(&arena, "20.txt");
+
+    const gl = try input.gridLines(&arena);
+    const vals = try inp.gridFlatten(&arena, gl);
+
+    var grid = G{ .nrows = gl.nrows, .ncols = gl.ncols, .vals = vals };
+
+    const s_idx = try grid.findOrError('S');
+    const e_idx = try grid.findOrError('E');
+
+    const alloc = arena.allocator();
+
+    const distS = try inp.bfs4U8(alloc, &grid, '#', s_idx);
+
+    print("found paths from Start \n", .{});
+
+    const distE = try inp.bfs4U8(alloc, &grid, '#', e_idx);
+
+    print("found paths from Finish \n", .{});
+
+    var counter: usize = 0;
+
+    const shortest = distS[e_idx];
+
+    for (0..vals.len) |p1| {
+        if (!onShortest(distS, distE, p1, shortest)) continue;
+
+        var cheat_it = grid.manhattanIndex(p1, cut_maxlength, inp.ManhMode.le);
+
+        while (cheat_it.next()) |p2| {
+            if (!onShortest(distS, distE, p2, shortest)) continue;
+            const cheat_len = cheat_it.dist();
+
+            // print("distS[p1] {d} distE[p2] {d} cut_threshold {d} cheat_len {d}\n", .{ distS[p1], distE[p2], cut_threshold, cheat_len });
+
+            if (distS[p1] + distE[p2] + cut_threshold + cheat_len <= distS[e_idx]) counter += 1;
+        }
+    }
+
+    print("shortest path from S to E is {d}\n", .{distS[e_idx]});
+
+    print("total number of cheats of {d} and more is: {d}\n", .{ cut_threshold, counter });
+}
+
+inline fn onShortest(distS: []const usize, distE: []const usize, idx: usize, shortest: usize) bool {
+    const inf = std.math.maxInt(usize);
+    const ds = distS[idx];
+    if (ds == inf) return false;
+    const de = distE[idx];
+    if (de == inf) return false;
+    return ds + de == shortest;
+}
 
 pub fn solvepart1(allocator: std.mem.Allocator) !void {
     try timed.timed("part1", part1, allocator);

@@ -26,3 +26,5 @@ pub const stringsAnyTrim = util.stringsAnyTrim;
 pub const stringsScalarKeepEmpty = util.stringsScalarKeepEmpty;
 pub const stripByteInPlace = util.stripByteInPlace;
 pub const Dir = util.Dir;
+
+pub const ManhMode = grid.ManhMode;
