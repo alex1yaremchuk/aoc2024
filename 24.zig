@@ -49,8 +49,6 @@ fn part1(_: std.mem.Allocator) !void {
     print("result is: {d}\n", .{result});
 }
 
-fn part2(_: std.mem.Allocator) !void {}
-
 pub fn solvepart1(allocator: std.mem.Allocator) !void {
     try timed.timed("part1", part1, allocator);
 }
@@ -236,4 +234,117 @@ fn readZNumber(values: *const std.AutoHashMap(Wire, Val)) !u64 {
         }
     }
     return result;
+}
+
+inline fn startsWith(w: Wire, c: u8) bool {
+    const n = unpackName(w);
+    return n[0] == c;
+}
+
+inline fn isXYWire(w: Wire) bool {
+    const n = unpackName(w);
+    return n[0] == 'x' or n[0] == 'y';
+}
+
+inline fn isXYPair(a: Wire, b: Wire) bool {
+    return (startsWith(a, 'x') and startsWith(b, 'y')) or
+        (startsWith(a, 'y') and startsWith(b, 'x'));
+}
+
+fn hasConsumerWithOp(
+    c: *const Circuit,
+    consumers: *const std.AutoHashMap(Wire, std.ArrayListUnmanaged(u32)),
+    w: Wire,
+    op: Op,
+) bool {
+    const lst = consumers.get(w) orelse return false;
+    for (lst.items) |gi| {
+        if (c.gates.items[gi].op == op) return true;
+    }
+    return false;
+}
+
+fn lessWire(_: void, a: Wire, b: Wire) bool {
+    const an = unpackName(a);
+    const bn = unpackName(b);
+    return std.mem.order(u8, an[0..], bn[0..]) == .lt;
+}
+
+fn printWire(w: Wire) void {
+    const n = unpackName(w);
+    print("{c}{c}{c}", .{ n[0], n[1], n[2] });
+}
+
+fn part2(_: std.mem.Allocator) !void {
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer arena.deinit();
+
+    const alloc = arena.allocator();
+
+    const input = try inp.readFile(&arena, "24.txt");
+    var c = try parseCircuit(alloc, input);
+    defer c.deinit(alloc);
+
+    var consumers = std.AutoHashMap(Wire, std.ArrayListUnmanaged(u32)).init(alloc);
+    defer {
+        var itc = consumers.iterator();
+        while (itc.next()) |e| e.value_ptr.deinit(alloc);
+        consumers.deinit();
+    }
+
+    for (c.gates.items, 0..) |g, i| {
+        const gi: u32 = @intCast(i);
+        try appendConsumer(alloc, &consumers, g.a, gi);
+        try appendConsumer(alloc, &consumers, g.b, gi);
+    }
+
+    var max_z: u8 = 0;
+    for (c.gates.items) |g| {
+        const zi = zIndex(g.out) orelse continue;
+        if (zi > max_z) max_z = zi;
+    }
+
+    const x00 = packName("x00");
+    const y00 = packName("y00");
+
+    var bad_map = std.AutoHashMap(Wire, u8).init(alloc);
+    defer bad_map.deinit();
+
+    for (c.gates.items) |g| {
+        if (zIndex(g.out)) |zi| {
+            if (zi != max_z and g.op != .xor_) {
+                try bad_map.put(g.out, 1);
+            }
+        } else if (g.op == .xor_ and !(isXYWire(g.a) and isXYWire(g.b))) {
+            try bad_map.put(g.out, 1);
+        }
+
+        if (g.op == .and_ and !(g.a == x00 and g.b == y00) and !(g.a == y00 and g.b == x00)) {
+            if (!hasConsumerWithOp(&c, &consumers, g.out, .or_)) {
+                try bad_map.put(g.out, 1);
+            }
+        }
+
+        if (g.op == .xor_ and isXYPair(g.a, g.b) and !(g.a == x00 and g.b == y00) and !(g.a == y00 and g.b == x00)) {
+            if (!hasConsumerWithOp(&c, &consumers, g.out, .xor_)) {
+                try bad_map.put(g.out, 1);
+            }
+        }
+    }
+
+    var bad = std.ArrayList(Wire).empty;
+    defer bad.deinit(alloc);
+
+    var it = bad_map.iterator();
+    while (it.next()) |e| {
+        try bad.append(alloc, e.key_ptr.*);
+    }
+
+    std.sort.pdq(Wire, bad.items, {}, lessWire);
+
+    for (bad.items, 0..) |w, i| {
+        if (i != 0) print(",", .{});
+        printWire(w);
+    }
+    print("\n", .{});
 }

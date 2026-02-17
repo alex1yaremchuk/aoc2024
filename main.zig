@@ -9,5 +9,5 @@ pub fn main(init: std.process.Init) !void {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    try day.solvepart1(allocator);
+    try day.solvepart2(allocator);
 }
